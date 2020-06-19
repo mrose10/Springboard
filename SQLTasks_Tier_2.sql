@@ -69,6 +69,7 @@ FROM `Facilities`
 WHERE facid
 IN (1,5);
 
+/* OUTPUT */ 
 CREATE TABLE IF NOT EXISTS `Facilities` (
   `facid` int(1) NOT NULL DEFAULT '0',
   `name` varchar(15) DEFAULT NULL,
@@ -117,11 +118,29 @@ INSERT INTO `Facilities` (`name`, `monthlymaintenance`, `END`) VALUES
 /* Q6: You'd like to get the first and last name of the last member(s)
 who signed up. Try not to use the LIMIT clause for your solution. */
 
+SELECT firstname,surname,joindate
+FROM `Members` 
+WHERE Members.joindate = (SELECT MAX(joindate) FROM `Members`);
+
+/* OUTPUT */
+INSERT INTO `Members` (`firstname`, `surname`, `joindate`) VALUES
+('Darren', 'Smith', '2012-09-26 18:08:45');
 
 /* Q7: Produce a list of all members who have used a tennis court.
 Include in your output the name of the court, and the name of the member
 formatted as a single column. Ensure no duplicate data, and order by
 the member name. */
+SELECT DISTINCT concat(firstname, ' ',surname) AS member_name, f.name
+FROM `Members` 
+INNER JOIN `Bookings`
+USING (memid)
+INNER JOIN `Facilities` as f
+USING (facid)
+WHERE f.name LIKE 'Tennis%'
+ORDER BY member_name
+
+/* OUTPUT */ 
+29 rows 
 
 
 /* Q8: Produce a list of bookings on the day of 2012-09-14 which
@@ -131,8 +150,40 @@ the guest user's ID is always 0. Include in your output the name of the
 facility, the name of the member formatted as a single column, and the cost.
 Order by descending cost, and do not use any subqueries. */
 
+SELECT  f.name,concat(firstname, ' ',surname) AS member_name,
+CASE memid
+    WHEN 0 THEN slots*guestcost
+    ELSE slots*membercost 
+END AS Cost 
+FROM `Bookings` as b
+    INNER JOIN `Facilities` as f
+    USING (facid)
+        INNER JOIN `Members`
+        USING (memid)
+WHERE b.starttime LIKE '2012-09-14%'
+HAVING Cost > 30
+ORDER BY Cost DESC
+
 
 /* Q9: This time, produce the same result as in Q8, but using a subquery. */
+SELECT name, full_name,
+CASE memid
+    WHEN 0 THEN slots*guestcost
+    ELSE slots*membercost 
+END AS Cost 
+FROM (SELECT slots, facid, memid, full_name
+                FROM (SELECT memid, concat(firstname, ' ',surname) 
+                        AS full_name 
+                        FROM `Members`	) AS member_name
+                INNER JOIN `Bookings`
+      			USING (memid)
+                WHERE starttime LIKE '2012-09-14%') AS subquery
+INNER JOIN `Facilities`
+USING (facid)
+HAVING Cost > 30
+ORDER BY Cost DESC
+
+
 
 
 /* PART 2: SQLite
